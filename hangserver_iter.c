@@ -100,6 +100,7 @@
  		}
  	}
  	if (! good_guess) lives--;
+	draw_hangman(lives)
  	if (strcmp (whole_word, part_word) == 0)
  		game_state = 'W'; /* W ==> User Won */
  	else if (lives == 0) {
@@ -109,4 +110,48 @@
  	sprintf (outbuf, "%s %d \n", part_word, lives);
  	write (out, outbuf, strlen (outbuf));
  	}
+ }
+
+draw_hangman(int lives)
+ {
+  switch(lives)
+  {
+    case 12:
+      printf("\n\n\n\n\n\n\n");
+      break;
+    case 11:
+      printf("\n\n\n\n\n\n=====\n");
+      break;
+    case 10:
+      printf("|\n |\n |\n |\n |\n |\n=====\n");
+      break;
+    case 9:
+      printf("+---+\n |\n |\n |\n |\n |\n=====\n");
+      break;
+    case 7:
+      printf("+---+\n |  |\n |  O\n |\n |\n |\n=====\n");
+      break;
+    case 6:
+      printf("\+---+\n |  |\n |  O\n | |\n |\n=====\n");
+      break;
+    case 5:
+      printf("\+---+\n |  |\n |  O\n | /|\n |\n=====\n");
+      break;
+    case 4:
+      printf("\+---+\n |  |\n |  O\n | /|\\\n |\n |\n=====\n");
+      break;
+    case 3:
+      printf("\+---+\n |  |\n |  O\n | /|\\\n | /\n |\n=====\n");
+      break;
+    case 2:
+      printf("\+---+\n |  |\n |  O\n | /|\\\n | /\\\n |\n=====\n");
+      break;
+    case 1:
+      printf("\+---+\n |  |\n |  O\n | /|\\\n | /\\\n |\n=====\n");
+      printf("Game Over!");
+      break;
+    default:
+      printf("\n\n\n\n\n\n\n");
+      break;
+  }
  }
