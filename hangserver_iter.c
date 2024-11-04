@@ -10,7 +10,7 @@
  #include <errno.h>
 
  extern time_t time ();
-
+//hello world
  int maxlives = 12;
  char *word [] = {
  # include "words"
