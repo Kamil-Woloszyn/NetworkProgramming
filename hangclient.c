@@ -1,5 +1,5 @@
 /* Hangclient.c - Client for hangman server.  */
-
+// Comment
  #include <stdio.h>
  #include <sys/types.h>
  #include <sys/socket.h>
@@ -10,12 +10,12 @@
  # define HANGMAN_TCP_PORT 1066
 
  int main (int argc, char * argv [])
- {
+ {	
  	struct sockaddr_in server; /* Server's address assembled here */
  	struct hostent * host_info;
  	int sock, count;
- 	 char i_line[LINESIZE];
- 	 char o_line[LINESIZE];
+ 	char i_line[LINESIZE];
+ 	char o_line[LINESIZE];
  	char * server_name;
 
  	/* Get server name from the command line.  If none, use 'localhost' */
