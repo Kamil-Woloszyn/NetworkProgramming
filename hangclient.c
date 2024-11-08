@@ -1,10 +1,23 @@
 /* Hangclient.c - Client for hangman server.  */
 // Comment
- #include <stdio.h>
+ //#include <stdio.h>
+ //#include <sys/types.h>
+ //#include <sys/socket.h>
+ //#include <netinet/in.h>
+//#include <netdb.h>
+
  #include <sys/types.h>
  #include <sys/socket.h>
  #include <netinet/in.h>
+ #include <stdio.h>
+ #include <syslog.h>
+ #include <signal.h>
+ #include <errno.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include <unistd.h>
  #include <netdb.h>
+
 
  # define LINESIZE 80
  # define HANGMAN_TCP_PORT 1066
@@ -26,13 +39,13 @@
  	sock = socket (AF_INET, SOCK_STREAM, 0);
  	if (sock <0) {
  		perror ("Creating stream socket");
- 		exit (1);
+ 		exit (0);
  	}
 
  	host_info = gethostbyname(server_name);
  	if (host_info == NULL) {
  		fprintf (stderr, "%s: unknown host:%s \ n", argv [0], server_name);
- 		exit (2);
+ 		exit (1);
  	}
 
  	/* Set up the server's socket address, then connect */
@@ -43,7 +56,7 @@
 
  	if (connect (sock, (struct sockaddr *) & server, sizeof server) <0) {
  		perror ("connecting to server");
- 		exit (3);
+ 		exit (2);
  	}
  	/*OK connected to the server.  
  Take a line from the server and show it, take a line and send the user input to the server. 

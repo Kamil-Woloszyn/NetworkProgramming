@@ -40,8 +40,17 @@ int main()
 			"Content-Type: text/html\r\n\r\n"
 			"<h1>Welcome to Hangman Game Server!</h1>";
 
+	
+
 
  	srand ((int) time ((long *) 0)); /* randomize the seed */
+
+	//Setting up fd sets
+	fd_set current_sockets, ready_sockets;
+	
+	//Initliaziling fd set
+	FD_ZERO(&current_sockets);
+	FD_SET(sock, &current_sockets);
 
 	//Set up the server hints for dual stack
 	printf("Configuring server...\n");
@@ -88,55 +97,85 @@ int main()
 		perror("Listening failed");
 		exit(1);
 	}
-fd = accept (sock, (struct sockaddr *) &client_address, &client_len);// client accepting
+	fd = accept (sock, (struct sockaddr *) &client_address, &client_len);// client accepting
 
 	// Client is now connect
-			r = recv(fd, buffer, buffer_size, 0);
-			if(r > 0)
-			{
-				printf("Received %d bytes: ", r);
-				for(int x = 0; x < r; x++)
-				{
-					putchar(buffer[x]);
-				}
-			}
-			//Send message
-			r = send(fd, http_data, strlen(http_data), 0);
-			if(r < 1)//check if the send function failed
-			{
-				perror("Send failed");
-				exit(1);
-			}
-			printf("Send %d bytes\n", r);//print the bytes
-			close(fd);//close client 
+	r = recv(fd, buffer, buffer_size, 0);
+	if(r > 0)
+	{
+		printf("Received %d bytes: ", r);
+		for(int x = 0; x < r; x++)
+		{
+			putchar(buffer[x]);
+		}
+	}
+	//Send message
+	r = send(fd, http_data, strlen(http_data), 0);
+	if(r < 1)//check if the send function failed
+	{
+		perror("Send failed");
+		exit(1);
+	}
+	printf("Send %d bytes\n", r);//print the bytes
+	close(fd);//close client 
 
+
+	
 	//Accept connections and handle each one of the new fork process
  	while (1) {
- 		client_len = sizeof(client_address);
-		fd = accept (sock, (struct sockaddr *) &client_address, &client_len);
- 		if (fd <0) {
- 			perror ("accepting connection");
- 			exit (3);
- 		}
-		int pid = fork();//create fork valuable
-		if(pid < 0)// if fork failed
+
+		//Copying current sockets to ready sockets because Select() is destructive
+		ready_sockets = current_sockets;	
+
+		if(select(FD_SETSIZE, &ready_sockets,NULL,NULL,NULL) < 0)
 		{
-			perror("fork failed");
-			close(fd);// close client
-			exit(1);
+			perror("Select Error");
+			exit(EXIT_FAILURE);
 		}
-		if(pid == 0)//check child process
+
+		for(int i = 0; i < FD_SETSIZE; i++)
 		{
-			close(sock);//Child doesn't need the listening socket
-			play_hangman(fd, fd);// play the hang man with client
-			close(fd);//Close the game
-			exit(0);//End the clid process
+			if(FD_ISSET(i, &ready_sockets))
+			{
+				if(i == sock)
+				{
+					//New Connection
+					client_len = sizeof(client_address);
+					fd = accept (sock, (struct sockaddr *) &client_address, &client_len);
+ 					FD_SET(client_len, &current_sockets);
+					printf("Connection Established");
+					if (fd <0) {
+ 						perror ("accepting connection");
+ 						exit (3);
+ 					}
+				}
+				else{
+					
+					int pid = fork();//create fork valuable
+					if(pid < 0)// if fork failed
+					{
+						perror("fork failed");
+						close(fd);// close client
+						exit(1);
+					}
+					if(pid == 0)//check child process
+					{
+						close(sock);//Child doesn't need the listening socket
+						play_hangman(fd, fd);// play the hang man with client
+						close(fd);//Close the game
+						exit(0);//End the clid process
+					}
+					else//check parent process
+					{
+						close(fd);//close parent socket
+					}
+ 					close (fd);//close client socket
+					FD_CLR(i, &current_sockets);	
+				}
+			}
 		}
-		else//check parent process
-		{
-			close(fd);//close parent socket
-		}
- 		close (fd);//close client socket
+
+ 		
  	}
 	
 	//Clean up
@@ -146,7 +185,7 @@ fd = accept (sock, (struct sockaddr *) &client_address, &client_len);// client a
 
  /* ---------------- Play_hangman () ---------------------*/
 
- play_hangman (int in, int out)
+ void play_hangman (int in, int out)
  {
  	char * whole_word, part_word [MAXLEN],
  	guess[MAXLEN], outbuf [MAXLEN];
@@ -202,7 +241,7 @@ fd = accept (sock, (struct sockaddr *) &client_address, &client_len);// client a
  	}
  }
  //*******Draw hangman diagram*******/
-draw_hangman(int lives, int out)
+void draw_hangman(int lives, int out)
  {
 	char hangman[MAXLEN];// store characters of the maxinmum size of the array of 100
   switch(lives)//check the lives 
