@@ -3,6 +3,7 @@
 
  #include <sys/types.h>
  #include <sys/socket.h>
+ #include <sys/select.h>
  #include <netinet/in.h>
  #include <stdio.h>
  #include <syslog.h>
@@ -22,13 +23,18 @@
  # define NUM_OF_WORDS (sizeof (word) / sizeof (word [0]))
  # define MAXLEN 80 /* Maximum size in the world of Any string */
  # define HANGMAN_TCP_PORT 1066
+
+ typedef struct sockaddr SA;
+ typedef struct sockaddr_in SA_IN;
+
  void play_hangman(int in, int out);
  void draw_hangman(int in, int out);
+ int accept_new_connection(int server_socket);
 int main()
  {
  	//int sock, fd, client_len;
  	//struct sockaddr_in server, client;
-	int sock, fd, option, r;
+	int sock, fd, client_socket, option, r;
 	struct addrinfo hints, *server;
 	struct sockaddr client_address;
 	socklen_t client_len;
@@ -47,10 +53,7 @@ int main()
 
 	//Setting up fd sets
 	fd_set current_sockets, ready_sockets;
-	
-	//Initliaziling fd set
-	FD_ZERO(&current_sockets);
-	FD_SET(sock, &current_sockets);
+	int max_connections = 10;
 
 	//Set up the server hints for dual stack
 	printf("Configuring server...\n");
@@ -97,6 +100,7 @@ int main()
 		perror("Listening failed");
 		exit(1);
 	}
+
 	fd = accept (sock, (struct sockaddr *) &client_address, &client_len);// client accepting
 
 	// Client is now connect
@@ -120,69 +124,76 @@ int main()
 	close(fd);//close client 
 
 
+	//Initliaziling fd set
+	FD_ZERO(&current_sockets);
+	FD_SET(sock, &current_sockets);
 	
 	//Accept connections and handle each one of the new fork process
  	while (1) {
+    	ready_sockets = current_sockets;
+    	struct timeval timeout;
+    	timeout.tv_sec = 5;
+	    timeout.tv_usec = 0;
 
-		//Copying current sockets to ready sockets because Select() is destructive
-		ready_sockets = current_sockets;	
+    	r = select(max_connections + 1, &ready_sockets, NULL, NULL, &timeout);
+	    if (r < 0) {
+        	perror("Select Error");
+    	    //exit(0);
+	    } else if (r == 0) {
+        	printf("Timeout no activity\n");
+    	    continue;
+	    }
 
-		if(select(FD_SETSIZE, &ready_sockets,NULL,NULL,NULL) < 0)
-		{
-			perror("Select Error");
-			exit(EXIT_FAILURE);
-		}
+ 	    for (int i = 0; i <= max_connections; i++) {
+ 	        if (FD_ISSET(i, &ready_sockets)) {
+	            if (i == sock) {
+            	    // Accept a new connection
+        	        client_len = sizeof(client_address);
+    	            client_socket = accept(sock, (struct sockaddr*)&client_address, &client_len);
+	                if (client_socket < 0) {
+                    	perror("Failed to accept connection");
+                	    continue;
+            	    }
+        	        FD_SET(client_socket, &current_sockets);
+    	            printf("New connection established\n");
+	            } else {
+                	// Handle existing connection with fork
+            	    int pid = fork();
+        	        if (pid == 0) {
+    	                // Child process: Handle client
+	                    close(sock);  // Child doesn't need the listening socket
+                    	play_hangman(i, i);  // Play hangman with the client
+                	    close(i);  // Close client socket after the game ends
+            	        exit(0);  // Exit the child process
+        	        } else if (pid > 0) {
+    	                // Parent process: Close client socket here to avoid duplication
+	                    close(i);  // Parent doesn't need the client socket directly
+                	} else {
+            	        // Fork failed
+        	            perror("Fork failed");
+    	                exit(1);
+	                	}
+            	}
+       		}
+    	}
+	}
 
-		for(int i = 0; i < FD_SETSIZE; i++)
-		{
-			if(FD_ISSET(i, &ready_sockets))
-			{
-				if(i == sock)
-				{
-					//New Connection
-					client_len = sizeof(client_address);
-					fd = accept (sock, (struct sockaddr *) &client_address, &client_len);
- 					FD_SET(client_len, &current_sockets);
-					printf("Connection Established");
-					if (fd <0) {
- 						perror ("accepting connection");
- 						exit (3);
- 					}
-				}
-				else{
-					
-					int pid = fork();//create fork valuable
-					if(pid < 0)// if fork failed
-					{
-						perror("fork failed");
-						close(fd);// close client
-						exit(1);
-					}
-					if(pid == 0)//check child process
-					{
-						close(sock);//Child doesn't need the listening socket
-						play_hangman(fd, fd);// play the hang man with client
-						close(fd);//Close the game
-						exit(0);//End the clid process
-					}
-					else//check parent process
-					{
-						close(fd);//close parent socket
-					}
- 					close (fd);//close client socket
-					FD_CLR(i, &current_sockets);	
-				}
-			}
-		}
-
- 		
- 	}
 	
 	//Clean up
 	close(sock);
 	return 0;
  }
-
+/* ------------------ ACCEPTING NEW CONNECTION ------------*/
+/*
+int accept_new_connection(int server_socket)
+{
+	int addr_size = sizeof(SA_IN);
+	int client_socket;
+	SA_IN client_addr;
+	check(client_socket = accept(server_socket,(SA*)&client_addr,(socklen_t*)&addr_size),"accept failed");
+	return client_socket;
+}
+*/
  /* ---------------- Play_hangman () ---------------------*/
 
  void play_hangman (int in, int out)
@@ -239,6 +250,7 @@ int main()
  	sprintf (outbuf, "%s %d \n", part_word, lives);
  	write (out, outbuf, strlen (outbuf));
  	}
+	close(in); // Close the client socket in the child
  }
  //*******Draw hangman diagram*******/
 void draw_hangman(int lives, int out)
