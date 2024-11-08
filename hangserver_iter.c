@@ -109,7 +109,7 @@ fd = accept (sock, (struct sockaddr *) &client_address, &client_len);// client a
 			}
 			printf("Send %d bytes\n", r);//print the bytes
 			close(fd);//close client 
-
+			
 	//Accept connections and handle each one of the new fork process
  	while (1) {
  		client_len = sizeof(client_address);
@@ -182,23 +182,34 @@ fd = accept (sock, (struct sockaddr *) &client_address, &client_len);// client a
  				exit (4);
  			printf ("re-read the startin \n");
  			} /* Re-start read () if interrupted by signal */
- 	good_guess = 0;
- 	for (i = 0; i <word_length; i++) {
- 		if (guess [0] == whole_word [i]) {
- 		good_guess = 1;
- 		part_word [i] = whole_word [i];
- 		}
- 	}
- 	if (! good_guess) lives--;
-	draw_hangman(lives, out);//draw hangman
- 	if (strcmp (whole_word, part_word) == 0)
- 		game_state = 'W'; /* W ==> User Won */
- 	else if (lives == 0) {
- 		game_state = 'L'; /* L ==> User Lost */
- 		strcpy (part_word, whole_word); /* User Show the word */
- 	}
- 	sprintf (outbuf, "%s %d \n", part_word, lives);
- 	write (out, outbuf, strlen (outbuf));
+			guess[0] = tolower(guess[0]);//change to lowercase word
+			good_guess = 0;
+		for (i = 0; i <word_length; i++) {
+			if (guess [0] == whole_word [i]) {
+			good_guess = 1;
+			part_word [i] = whole_word [i];
+			}
+		}
+	for (i = 0; i <word_length; i++) {
+	if(!isalpha(guess[0]))//check invalid input like numbers and symbols
+	{
+		sprintf(outbuf, "Invalid input!\n");
+		write(out, outbuf, strlen(outbuf));
+	}
+	else
+	{
+		if (! good_guess) lives--;
+		draw_hangman(lives, out);//draw hangman
+		if (strcmp (whole_word, part_word) == 0)
+			game_state = 'W'; /* W ==> User Won */
+		else if (lives == 0) {
+			game_state = 'L'; /* L ==> User Lost */
+			strcpy (part_word, whole_word); /* User Show the word */
+		}
+		sprintf (outbuf, "%s %d \n", part_word, lives);
+		write (out, outbuf, strlen (outbuf));
+	}
+	}
  	}
  }
  //*******Draw hangman diagram*******/
