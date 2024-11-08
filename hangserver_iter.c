@@ -12,6 +12,7 @@
  #include <string.h>
  #include <unistd.h>
  #include <netdb.h>
+#include <ctype.h> 
 
  extern time_t time ();
 //hello world
@@ -109,7 +110,7 @@ fd = accept (sock, (struct sockaddr *) &client_address, &client_len);// client a
 			}
 			printf("Send %d bytes\n", r);//print the bytes
 			close(fd);//close client 
-
+			
 	//Accept connections and handle each one of the new fork process
  	while (1) {
  		client_len = sizeof(client_address);
@@ -146,63 +147,87 @@ fd = accept (sock, (struct sockaddr *) &client_address, &client_len);// client a
 
  /* ---------------- Play_hangman () ---------------------*/
 
- play_hangman (int in, int out)
- {
- 	char * whole_word, part_word [MAXLEN],
- 	guess[MAXLEN], outbuf [MAXLEN];
+ void play_hangman(int in, int out)
+{
+    char *whole_word, part_word[MAXLEN], guess[MAXLEN], outbuf[MAXLEN];
+    int lives = maxlives;
+    int game_state = 'I'; // I = Incomplete
+    int i, good_guess, word_length;
+    char hostname[MAXLEN];
 
- 	int lives = maxlives;
- 	int game_state = 'I';//I = Incomplete
- 	int i, good_guess, word_length;
- 	char hostname[MAXLEN];
+    gethostname(hostname, MAXLEN);
+    sprintf(outbuf, "Playing hangman on host %s: \n\n", hostname);
+    write(out, outbuf, strlen(outbuf));
 
- 	gethostname (hostname, MAXLEN);
- 	sprintf(outbuf, "Playing hangman on host% s: \n \n", hostname);
- 	write(out, outbuf, strlen (outbuf));
+    /* Pick a word at random from the list */
+    whole_word = word[rand() % NUM_OF_WORDS];
+    word_length = strlen(whole_word);
+    syslog(LOG_USER | LOG_INFO, "server chose hangman word %s", whole_word);
 
- 	/* Pick a word at random from the list */
- 	whole_word = word[rand() % NUM_OF_WORDS];
- 	word_length = strlen(whole_word);
- 	syslog (LOG_USER | LOG_INFO, "server chose hangman word %s", whole_word);
+    /* No letters are guessed Initially */
+    for (i = 0; i < word_length; i++)
+        part_word[i] = '-';
+    part_word[i] = '\0';
 
- 	/* No letters are guessed Initially */
- 	for (i = 0; i <word_length; i++)
- 		part_word[i]='-';
- 	
-	part_word[i] = '\0';
+    sprintf(outbuf, "%s %d \n", part_word, lives);
+    write(out, outbuf, strlen(outbuf));
 
- 	sprintf (outbuf, "%s %d \n", part_word, lives);
- 	write (out, outbuf, strlen(outbuf));
+    while (game_state == 'I') {
+        /* Get a letter from player guess */
+        while (1) {
+            // Read exactly one character (no more, no less)
+            ssize_t r = read(in, guess, 1);
+            if (r < 0) {
+                if (errno != EINTR) {
+                    perror("Error reading input");
+                    exit(4);
+                }
+            } else if (r == 0) {
+                // No data read (client may have disconnected)
+                break;
+            } else {
+                // Make sure only one character was received
+                guess[0] = tolower(guess[0]); // Ensure lowercase for consistency
 
- 	while (game_state == 'I')
- 	/* Get a letter from player guess */
- 	{
-		while (read (in, guess, MAXLEN) <0) {
- 			if (errno != EINTR)
- 				exit (4);
- 			printf ("re-read the startin \n");
- 			} /* Re-start read () if interrupted by signal */
- 	good_guess = 0;
- 	for (i = 0; i <word_length; i++) {
- 		if (guess [0] == whole_word [i]) {
- 		good_guess = 1;
- 		part_word [i] = whole_word [i];
- 		}
- 	}
- 	if (! good_guess) lives--;
-	draw_hangman(lives, out);//draw hangman
- 	if (strcmp (whole_word, part_word) == 0)
- 		game_state = 'W'; /* W ==> User Won */
- 	else if (lives == 0) {
- 		game_state = 'L'; /* L ==> User Lost */
- 		strcpy (part_word, whole_word); /* User Show the word */
- 	}
- 	sprintf (outbuf, "%s %d \n", part_word, lives);
- 	write (out, outbuf, strlen (outbuf));
- 	}
- }
+                if (!isalpha(guess[0])) {
+                    // If the input is not a letter, reject it
+                    sprintf(outbuf, "Invalid input! Please enter a single letter.\n");
+                    write(out, outbuf, strlen(outbuf));
+                } else {
+                    // Process the valid guess
+                    good_guess = 0;
+                    for (i = 0; i < word_length; i++) {
+                        if (guess[0] == whole_word[i]) {
+                            good_guess = 1;
+                            part_word[i] = whole_word[i];
+                        }
+                    }
+
+                    if (!good_guess) {
+                        lives--;
+                        draw_hangman(lives, out); // Draw the hangman
+                    }
+
+                    if (strcmp(whole_word, part_word) == 0) {
+                        game_state = 'W'; /* W ==> User Won */
+                    } else if (lives == 0) {
+                        game_state = 'L'; /* L ==> User Lost */
+                        strcpy(part_word, whole_word); /* Show the whole word */
+                    }
+
+                    // Send the updated word and lives to the client
+                    sprintf(outbuf, "%s %d \n", part_word, lives);
+                    write(out, outbuf, strlen(outbuf));
+
+                    break; // Break out of the input loop once a valid input has been processed
+                }
+            }
+        }
+    }
+}
+
  //*******Draw hangman diagram*******/
-draw_hangman(int lives, int out)
+void draw_hangman(int lives, int out)
  {
 	char hangman[MAXLEN];// store characters of the maxinmum size of the array of 100
   switch(lives)//check the lives 
