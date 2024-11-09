@@ -31,7 +31,7 @@
  void draw_hangman(int in, int out);
 int main()
  {
-	int sock, fd, client_socket, option, r, num;
+	int sock, fd, client_socket, option, r;
 	struct addrinfo hints, *server;
 	struct sockaddr client_address;
 	socklen_t client_len;
@@ -46,9 +46,9 @@ int main()
 	char hostname_size = 32;
 	char hostname[hostname_size];
 	char connection[backlog][hostname_size];
+	int num = 0;
 
  	srand ((int) time ((long *) 0)); /* randomize the seed */
-
 	//Setting up fd sets
 	fd_set current_sockets, ready_sockets;
 	int max_connections;
@@ -61,7 +61,7 @@ int main()
 	hints.ai_socktype = SOCK_STREAM;	/* TCP, streaming */
 	hints.ai_flags = AI_PASSIVE;  //accept any connections
 	//Get address info for both IPv4 and IPv6
-	r = getaddrinfo( NULL, "1066", &hints, &server );
+	r = getaddrinfo( 0, "1066", &hints, &server );
 	if(r != 0)
 	{
 		perror("Failed to configure server");
@@ -154,11 +154,11 @@ int main()
 					printf("New connection from %s\n", connection[client_socket]);
 					//add new client socket to the master list
         	        FD_SET(client_socket, &current_sockets);
-					strcpy(buffer, "Hello to ");
-					strcat(buffer, connection[client_socket]);
-					strcat(buffer, "!");
-					send(client_socket, buffer, strlen(buffer), 0);
+					num++;
+					sprintf(buffer, "Hello player %d Please enter a letter!\n", num);
+ 					write(client_socket, buffer, strlen (buffer));
 					// Handle existing connection with fork
+					printf("Player %d join the server\n",num);
             	    int pid = fork();
         	        if (pid == 0) {
     	                // Child process: Handle client
@@ -168,9 +168,10 @@ int main()
 						FD_CLR(client_socket, &current_sockets);
             	        exit(0);  // Exit the child process
         	        } else if (pid > 0) {
-    	                // Parent process: Close client socket here to avoid duplication
+    	                // Parent process: Close client socket here to avoid duplication and avoid zombie
 	                    close(client_socket);  // Parent doesn't need the client socket directly
 						FD_CLR(client_socket, &current_sockets);
+						waitpid(pid, NULL, WNOHANG);// wait for the for the child process to terminate
 					} else {
             	        // Fork failed
         	            perror("Fork failed");
@@ -224,24 +225,24 @@ int main()
  			if (errno != EINTR)
  				exit (4);
  			printf ("re-read the startin \n");
- 		} /* Re-start read () if interrupted by signal */
- 		good_guess = 0;
- 		for (i = 0; i <word_length; i++) {
- 			if (guess [0] == whole_word [i]) {
- 			good_guess = 1;
- 			part_word [i] = whole_word [i];
- 			}
+ 			} /* Re-start read () if interrupted by signal */
+ 	good_guess = 0;
+ 	for (i = 0; i <word_length; i++) {
+ 		if (guess [0] == whole_word [i]) {
+ 		good_guess = 1;
+ 		part_word [i] = whole_word [i];
  		}
- 		if (! good_guess) lives--;
-		draw_hangman(lives, out);//draw hangman
- 		if (strcmp (whole_word, part_word) == 0)
- 			game_state = 'W'; /* W ==> User Won */
- 		else if (lives == 0) {
- 			game_state = 'L'; /* L ==> User Lost */
- 			strcpy (part_word, whole_word); /* User Show the word */
- 		}
- 		sprintf (outbuf, "%s %d \n", part_word, lives);
- 		write (out, outbuf, strlen (outbuf));
+ 	}
+ 	if (! good_guess) lives--;
+	draw_hangman(lives, out);//draw hangman
+ 	if (strcmp (whole_word, part_word) == 0)
+ 		game_state = 'W'; /* W ==> User Won */
+ 	else if (lives == 0) {
+ 		game_state = 'L'; /* L ==> User Lost */
+ 		strcpy (part_word, whole_word); /* User Show the word */
+ 	}
+ 	sprintf (outbuf, "%s %d \n", part_word, lives);
+ 	write (out, outbuf, strlen (outbuf));
  	}
 	close(in); // Close the client socket in the child
  }
@@ -270,22 +271,22 @@ void draw_hangman(int lives, int out)
       sprintf(hangman,"+---+\n |  |\n |  \n |\n |\n |\n=====\n");
       break;
     case 6:
-      sprintf(hangman,"+---+\n |  |\n |  O\n |  \n |\n=====\n");
+      sprintf(hangman,"\+---+\n |  |\n |  O\n |  \n |\n=====\n");
       break;
     case 5:
-      sprintf(hangman,"+---+\n |  |\n |  O\n |  |\n |\n=====\n");
+      sprintf(hangman,"\+---+\n |  |\n |  O\n |  |\n |\n=====\n");
       break;
     case 4:
-      sprintf(hangman,"+---+\n |  |\n |  O\n | /|\n |\n |\n=====\n");
+      sprintf(hangman,"\+---+\n |  |\n |  O\n | /|\n |\n |\n=====\n");
       break;
     case 3:
-      sprintf(hangman,"+---+\n |  |\n |  O\n | /|\\\n | \n |\n=====\n");
+      sprintf(hangman,"\+---+\n |  |\n |  O\n | /|\\\n | \n |\n=====\n");
       break;
     case 2:
-      sprintf(hangman,"+---+\n |  |\n |  O\n | /|\\\n | /\n |\n=====\n");
+      sprintf(hangman,"\+---+\n |  |\n |  O\n | /|\\\n | /\n |\n=====\n");
       break;
     case 1:
-      sprintf(hangman,"+---+\n |  |\n |  O\n | /|\\\n | /\\\n |\n=====\n");
+      sprintf(hangman,"\+---+\n |  |\n |  O\n | /|\\\n | /\\\n |\n=====\n");
       break;
 	case 0:
       sprintf(hangman,"Game Over!\n");
@@ -295,6 +296,5 @@ void draw_hangman(int lives, int out)
       break;
   }
   write (out, hangman, strlen(hangman));// send out message of the hangman diagram
-
-
  }
+
