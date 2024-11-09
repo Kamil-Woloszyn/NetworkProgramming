@@ -10,7 +10,7 @@
  #include <string.h>
  #include <unistd.h>
  #include <netdb.h>
-#include <ctype.h> 
+ #include <ctype.h> 
 
  # define LINESIZE 80
  # define HANGMAN_TCP_PORT 1066
