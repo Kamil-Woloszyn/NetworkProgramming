@@ -15,6 +15,31 @@
  # define LINESIZE 80
  # define HANGMAN_TCP_PORT 1066
 
+/* Function to check if input is a single letter */
+int is_valid_input(char *input) {
+    // Check if the input is exactly one alphabetic character
+    return (strlen(input) == 1 && isalpha(input[0]));
+}
+
+/* Function to get a valid single letter from the user */
+void get_single_letter_input(char *input) {
+    while (1) {
+        printf("Please enter only one letter: ");
+        fgets(input, LINESIZE, stdin); // Read user input
+
+        // Remove newline character from input (if any)
+        input[strcspn(input, "\n")] = 0;
+
+        // Check if input is valid
+        if (is_valid_input(input)) {
+            break; // Valid input, break the loop
+        } else {
+            // Invalid input, prompt again
+            printf("Invalid input! Please enter a single letter.\n");
+        }
+    }
+}
+
  int main (int argc, char * argv [])
  {	
  	struct sockaddr_in server; /* Server's address assembled here */
@@ -26,7 +51,7 @@
 
  	/* Get server name from the command line.  If none, use 'localhost' */
 
- 	server_name = (argc = 1)?  argv [1]: "localhost";
+ 	server_name = (argc == 1)?  argv [1]: "localhost";
 
  	/* Create the socket */
  	sock = socket (AF_INET, SOCK_STREAM, 0);
@@ -57,8 +82,23 @@
 
  	printf ("Connected to server %s \n", server_name);
  	while ((count = read (sock, i_line, LINESIZE)) > 0) {
- 		write (1, i_line, count);
- 		count = read (0, o_line, LINESIZE);//0 = STDIN
- 		write (sock, o_line, count);
+		
+ 		write(1, i_line, count); // Display server message
+        
+        // Get valid input from the user
+        get_single_letter_input(o_line); // Get a single letter from the user
+
+        // Send the input to the server
+        if (write(sock, o_line, strlen(o_line)) < 0) {
+            perror("Sending to Server");
+            break;
+        }
  	}
+	if(count < 0)
+	{
+		perror("Reading from Socket");
+
+	}
+	close(sock);
+	return 0;
  }
