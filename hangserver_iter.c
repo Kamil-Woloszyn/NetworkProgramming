@@ -259,7 +259,7 @@ void draw_hangman(int lives, int out)
       sprintf(hangman,"\n\n\n\n\n\n=====\n");
       break;
     case 10:
-      sprintf(hangman,"|\n |\n |\n |\n |\n =====\n");
+      sprintf(hangman," |\n |\n |\n |\n |\n =====\n");
       break;
     case 9:
       sprintf(hangman,"+    \n |\n |\n |\n |\n |\n=====\n");
