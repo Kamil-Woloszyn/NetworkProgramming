@@ -21,7 +21,8 @@
  # include "words"
  };
  # define NUM_OF_WORDS (sizeof (word) / sizeof (word [0]))
- # define MAXLEN 80 /* Maximum size in the world of Any string */
+ # define MAXLEN 300 /* Maximum size in the world of Any string */
+ //# define outbuf_size 256
  # define HANGMAN_TCP_PORT 1066
  void play_hangman(int in, int out);
  void draw_hangman(int in, int out);
@@ -156,7 +157,7 @@ fd = accept (sock, (struct sockaddr *) &client_address, &client_len);// client a
     char hostname[MAXLEN];
 
     gethostname(hostname, MAXLEN);
-    sprintf(outbuf, "Playing hangman on host %s: \n\n", hostname);
+    printf(outbuf, "Playing hangman on host %s", hostname);
     write(out, outbuf, strlen(outbuf));
 
     /* Pick a word at random from the list */
@@ -168,8 +169,7 @@ fd = accept (sock, (struct sockaddr *) &client_address, &client_len);// client a
     for (i = 0; i < word_length; i++)
         part_word[i] = '-';
     part_word[i] = '\0';
-
-    sprintf(outbuf, "%s %d \n", part_word, lives);
+    printf(outbuf, "%s %d\n", part_word, lives);
     write(out, outbuf, strlen(outbuf));
 
     while (game_state == 'I') {
@@ -216,7 +216,7 @@ fd = accept (sock, (struct sockaddr *) &client_address, &client_len);// client a
                     }
 
                     // Send the updated word and lives to the client
-                    sprintf(outbuf, "%s %d \n", part_word, lives);
+                    sprintf(outbuf, part_word, lives);
                     write(out, outbuf, strlen(outbuf));
 
                     break; // Break out of the input loop once a valid input has been processed
@@ -251,22 +251,22 @@ void draw_hangman(int lives, int out)
       sprintf(hangman,"+---+\n |  |\n |  \n |\n |\n |\n=====\n");
       break;
     case 6:
-      sprintf(hangman,"\+---+\n |  |\n |  O\n |  \n |\n=====\n");
+      sprintf(hangman,"+---+\n |  |\n |  O\n |  \n |\n=====\n");
       break;
     case 5:
-      sprintf(hangman,"\+---+\n |  |\n |  O\n |  |\n |\n=====\n");
+      sprintf(hangman,"+---+\n |  |\n |  O\n |  |\n |\n=====\n");
       break;
     case 4:
-      sprintf(hangman,"\+---+\n |  |\n |  O\n | /|\n |\n |\n=====\n");
+      sprintf(hangman,"+---+\n |  |\n |  O\n | /|\n |\n |\n=====\n");
       break;
     case 3:
-      sprintf(hangman,"\+---+\n |  |\n |  O\n | /|\\\n | \n |\n=====\n");
+      sprintf(hangman,"+---+\n |  |\n |  O\n | /|\\\n | \n |\n=====\n");
       break;
     case 2:
-      sprintf(hangman,"\+---+\n |  |\n |  O\n | /|\\\n | /\n |\n=====\n");
+      sprintf(hangman,"+---+\n |  |\n |  O\n | /|\\\n | /\n |\n=====\n");
       break;
     case 1:
-      sprintf(hangman,"\+---+\n |  |\n |  O\n | /|\\\n | /\\\n |\n=====\n");
+      sprintf(hangman,"+---+\n |  |\n |  O\n | /|\\\n | /\\\n |\n=====\n");
       break;
 	case 0:
       sprintf(hangman,"Game Over!\n");
