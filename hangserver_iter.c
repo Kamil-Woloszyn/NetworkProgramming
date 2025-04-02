@@ -58,7 +58,7 @@ int main()
 	printf("Configuring server...\n");
  	
 	memset( &hints, 0, sizeof(struct addrinfo) );
-	hints.ai_family = AF_INET6;			/* IPv6 connection */
+	hints.ai_family = AF_UNSPEC;	/* IPv4 or IPv6 connection */
 	hints.ai_socktype = SOCK_STREAM;	/* TCP, streaming */
 	hints.ai_flags = AI_PASSIVE;  //accept any connections
 	//Get address info for both IPv4 and IPv6
